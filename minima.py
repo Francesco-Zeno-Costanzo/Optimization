@@ -54,7 +54,7 @@ def grad_disc(f, x0, tol, step):
     tol : float
         required tollerance
         the function stops when all components
-        of the gradient have smoller than tol
+        of the gradient have smaller than tol
     step : float
         size of step to do, to choose carefully
 
@@ -113,7 +113,7 @@ def grad_disc_m(f, x0, tol, alpha, beta):
     tol : float
         required tollerance
         the function stops when all components
-        of the gradient have smoller than tol
+        of the gradient have smaller than tol
     alpha : float
         size of step to do, to choose carefully
     beta : float
@@ -179,7 +179,7 @@ def adadelta(f, x0, tol, rho, eps):
     tol : float
         required tollerance
         the function stops when all components
-        of the gradient have smoller than tol
+        of the gradient have smaller than tol
     rho : float
         parameter of alghoritm, decay rate, to choose carefully
     eps : float
@@ -246,7 +246,7 @@ def adam(f, x0, tol, a, b1, b2, eps):
     tol : float
         required tollerance
         the function stops when all components
-        of the gradient have smoller than tol
+        of the gradient have smaller than tol
     a : float
         size of step to do, to choose carefully, typical value is 0.001
     b1 : float

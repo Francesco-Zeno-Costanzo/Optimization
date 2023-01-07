@@ -24,9 +24,10 @@ def lm_fit(func, x0, tol, step, data, dense_output=False):
     x0 : 1darray
         initial guess
     tol : float
-        required tollerance
-        the function stops when all components
-        of the gradient have smoller than tol
+        required tollerance, the algorithm stop if
+        abs(rms_rsn - rms_res) < tol
+        rms_rsn = (y - f(x, {\theta^{n+1})/dy
+        rms_res = (y - f(x, {\theta^{n})/dy
     step : float
         size of spet to do, to choose carefully
     data : tuple

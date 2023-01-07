@@ -17,7 +17,7 @@ def golden_search(f, a, b, tol):
     tol : float
         required tollerance
         the function stops when all components
-        of the gradient have smoller than tol
+        of the gradient have smaller than tol
 
     Returns
     -------

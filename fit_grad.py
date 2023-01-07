@@ -27,7 +27,7 @@ def gdm_fit(f, x0, tol, alpha, beta, data, dense_output=False):
     tol : float
         required tollerance
         the function stops when all components
-        of the gradient have smoller than tol
+        of the gradient have smaller than tol
     alpha : float
         size of step to do, to choose carefully
     beta : float
