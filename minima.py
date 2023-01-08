@@ -324,7 +324,8 @@ def test1d():
     #---------------------------------------------------
     print("with momentum")
     x0 = np.array([1.5])
-    sol, iter = grad_disc_m(G, x0, 1e-8, 1e-3, 0.955)
+    sol, iter = grad_disc_m(G, x0, 1e-8, 1e-3, 0.953)  #global
+    #sol, iter = grad_disc_m(G, x0, 1e-8, 1e-3, 0.9) #local
 
     xs2, = sol.T
     x_min = xs2[-1]
@@ -352,7 +353,8 @@ def test1d():
     #---------------------------------------------------
     print("Adam")
     x0 = np.array([1.5])
-    sol, iter = adam(G, x0, 1e-8, 0.001, 0.9, 0.999, 1e-8)
+    #sol, iter = adam(G, x0, 1e-8, 0.001, 0.999, 0.998, 1e-8) #global
+    sol, iter = adam(G, x0, 1e-8, 0.001, 0.9, 0.999, 1e-8)   #local
 
     xs4, = sol.T
     x_min = xs4[-1]
