@@ -5,15 +5,16 @@ some parameters delicately to make the result make sense
 """
 
 import numpy as np
+from scipy.linalg import svd
 import matplotlib.pyplot as plt
 
 
-def lm_fit(func, x0, tol, step, data, dense_output=False):
+def lm_fit(func, x, y, x0, sigma=None, tol=1e-6, step=1e-4, dense_output=False, absolute_sigma=False):
     """
     Implementation of Levenberg–Marquardt algorithm
     for non-linear least squares. This algorithm interpolates
-    between the Gauss–Newton algorithm (GNA) and the method
-    of gradient descent. It is iterative optimization algorithms
+    between the Gauss–Newton algorithm and the method of
+    gradient descent. It is iterative optimization algorithms
     so finds only a local minimum. So you have to be careful
     about the values ​​you pass in x0
 
@@ -21,24 +22,35 @@ def lm_fit(func, x0, tol, step, data, dense_output=False):
     ----------
     f : callable
         fit function
+    x : 1darray
+        the independent variable where the data is measured.
+    y : 1darray
+        the dependent data, y <= f(x, {\theta})
     x0 : 1darray
         initial guess
+    sigma : None or 1darray
+        the uncertainty on y, if None sigma=np.ones(len(y)))
     tol : float
         required tollerance, the algorithm stop if
         abs(rms_rsn - rms_res) < tol
         rms_rsn = (y - f(x, {\theta^{n+1})/dy
         rms_res = (y - f(x, {\theta^{n})/dy
     step : float
-        size of spet to do, to choose carefully
-    data : tuple
-        data to fit, data = (x, y, dy)
+        size of step to do, to choose carefully
     dense_output : bool, optional dafult False
         if true all iteration are returned
+    absolute_sigma : bool, optional dafult False
+        If True, `sigma` is used in an absolute sense and
+        the estimated parameter covariance `pcov` reflects
+        these absolute values.
+        pcov(absolute_sigma=False) = pcov(absolute_sigma=True) * chisq(popt)/(M-N)
 
     Returns
     -------
-    x0 : ndarray
+    x0 : 1d array or ndarray
         array solution
+    pcov : 2darray
+        The estimated covariance of popt
     iter : int
         number of iteration
     """
@@ -48,10 +60,15 @@ def lm_fit(func, x0, tol, step, data, dense_output=False):
     l = 1e-3               #damping factor
     f = 10                 #factor for update damping factor
     M = len(x0)            #number of variable
-    N = len(data[0])       #number of data
+    N = len(x)             #number of data
     s = np.zeros(M)        #auxiliary array for derivatives
     J = np.zeros((N, M))   #gradient
-    x, y, dy = data        #data
+
+    if sigma is None :     #error on data
+        dy = np.ones(N)
+    else :
+        dy = sigma
+
     if dense_output:       #to store solution
         X = []
         X.append(x0)
@@ -66,15 +83,15 @@ def lm_fit(func, x0, tol, step, data, dense_output=False):
             s[:] = 0                                        #reset to select the other variables
 
         JtJ = J.T @ J                             #matrix multiplication, JtJ is an MxM matrix
-        dia = np.eye(M)*diag(JtJ)                 #dia_ii = JtJ_ii ; dia_ij = 0
+        dia = np.eye(M)*np.diag(JtJ)              #dia_ii = JtJ_ii ; dia_ij = 0
         res = (y - func(x, *x0))/dy               #residuals
-        b   = J.T @ res                           #ordinate or “dependent variable” values
+        b   = J.T @ res                           #ordinate or “dependent variable” values of system
         d   = np.linalg.solve(JtJ + l*dia, b)     #system solution
         x_n = x0 + d                              #solution at new time
 
         res_new = (y - func(x, *x_n))/dy          #new residuarls
         rms_res = np.sqrt(sum(res**2))            #=np.linalg.norm, nomr of residuals
-        rms_rsn = np.sqrt(sum(res_new**2))        #norm of nwe residual
+        rms_rsn = np.sqrt(sum(res_new**2))        #norm of new residual
 
         if rms_rsn < rms_res :                    #if i'm closer to the solution
             x0 = x_n                              #update solution
@@ -90,11 +107,25 @@ def lm_fit(func, x0, tol, step, data, dense_output=False):
         if dense_output:
             X.append(x0)
 
+    #compute covariance matrix
+    # Do Moore-Penrose inverse discarding zero singular values.
+    _, s, VT = svd(J, full_matrices=False)
+    threshold = np.finfo(float).eps * max(J.shape) * s[0]
+
+    s = s[s > threshold]
+    VT = VT[:s.size]
+
+    pcov = np.dot(VT.T / s**2, VT)
+
+    if not absolute_sigma:
+        s_sq = sum(res_new**2) / (N - M)
+        pcov = pcov * s_sq
+
     if not dense_output:
-        return x0, iter
+        return x0, pcov, iter
     else :
         X = np.array(X)
-        return X, iter
+        return X, pcov, iter
 
 
 def f(x, m, q):
@@ -116,15 +147,24 @@ init = np.array([-1, 10.])   #|
 tau  = 1e-8                  #|> be careful
 step = 1e-4                  #|
 
-pars, iter = lm_fit(f, init, tau, step, data=(x, y, dy))
-for i, p in enumerate(pars):
-    print(f"pars{i} = {p:.5f}")
+pars, covm, iter = lm_fit(f, x, y, init, sigma=dy, tol=tau, step=step)
+dpar = np.sqrt(covm.diagonal())
+for i, p, dp in zip(range(len(pars)), pars, dpar):
+    print(f"pars{i} = {p:.5f} +- {dp:.5f}")
 print(f"numero di iterazioni = {iter}")
 
 #Calcoliamo il chi quadro,indice ,per quanto possibile, della bontà del fit:
 chisq = sum(((y - f(x, *pars))/dy)**2.)
 ndof = len(y) - len(pars)
 print(f'chi quadro = {chisq:.3f} ({ndof:d} dof)')
+
+#Definiamo un matrice di zeri che divverà la matrice di correlazione:
+c=np.zeros((len(pars),len(pars)))
+#Calcoliamo le correlazioni e le inseriamo nella matrice:
+for i in range(0, len(pars)):
+    for j in range(0, len(pars)):
+       c[i][j] = (covm[i][j])/(np.sqrt(covm.diagonal()[i])*np.sqrt(covm.diagonal()[j]))
+print(c) #matrice di correlazione
 
 ##Plot
 #Grafichiamo il risultato
@@ -172,9 +212,9 @@ init3 = np.array([-1, 9.5])
 tau   = 1e-8
 step  = 1e-4
 
-popt1, _  = lm_fit(f, init1, tau, step, data=(x, y, dy), dense_output=True)
-popt2, _  = lm_fit(f, init2, tau, step, data=(x, y, dy), dense_output=True)
-popt3, _  = lm_fit(f, init3, tau, step, data=(x, y, dy), dense_output=True)
+popt1, _, _ = lm_fit(f, x, y, init1, sigma=dy, tol=tau, step=step, dense_output=True)
+popt2, _, _ = lm_fit(f, x, y, init2, sigma=dy, tol=tau, step=step, dense_output=True)
+popt3, _, _ = lm_fit(f, x, y, init3, sigma=dy, tol=tau, step=step, dense_output=True)
 
 plt.figure(2)
 plt.title("Traiettorie soluzioni")
