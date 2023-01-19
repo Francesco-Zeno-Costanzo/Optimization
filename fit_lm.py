@@ -9,7 +9,7 @@ from scipy.linalg import svd
 import matplotlib.pyplot as plt
 
 
-def lm_fit(func, x, y, x0, sigma=None, tol=1e-6, step=1e-4, dense_output=False, absolute_sigma=False):
+def lm_fit(func, x, y, x0, sigma=None, tol=1e-6, dense_output=False, absolute_sigma=False):
     """
     Implementation of Levenberg–Marquardt algorithm
     for non-linear least squares. This algorithm interpolates
@@ -35,8 +35,6 @@ def lm_fit(func, x, y, x0, sigma=None, tol=1e-6, step=1e-4, dense_output=False, 
         abs(rms_rsn - rms_res) < tol
         rms_rsn = (y - f(x, {\theta^{n+1})/dy
         rms_res = (y - f(x, {\theta^{n})/dy
-    step : float
-        size of step to do, to choose carefully
     dense_output : bool, optional dafult False
         if true all iteration are returned
     absolute_sigma : bool, optional dafult False
@@ -145,9 +143,8 @@ dy = np.array(y.size*[0.1])
 
 init = np.array([-1, 10.])   #|
 tau  = 1e-8                  #|> be careful
-step = 1e-4                  #|
 
-pars, covm, iter = lm_fit(f, x, y, init, sigma=dy, tol=tau, step=step)
+pars, covm, iter = lm_fit(f, x, y, init, sigma=dy, tol=tau)
 dpar = np.sqrt(covm.diagonal())
 for i, p, dp in zip(range(len(pars)), pars, dpar):
     print(f"pars{i} = {p:.5f} +- {dp:.5f}")
@@ -210,11 +207,10 @@ init1 = np.array([-1, 10.])
 init2 = np.array([-1, 10.5])
 init3 = np.array([-1, 9.5])
 tau   = 1e-8
-step  = 1e-4
 
-popt1, _, _ = lm_fit(f, x, y, init1, sigma=dy, tol=tau, step=step, dense_output=True)
-popt2, _, _ = lm_fit(f, x, y, init2, sigma=dy, tol=tau, step=step, dense_output=True)
-popt3, _, _ = lm_fit(f, x, y, init3, sigma=dy, tol=tau, step=step, dense_output=True)
+popt1, _, _ = lm_fit(f, x, y, init1, sigma=dy, tol=tau, dense_output=True)
+popt2, _, _ = lm_fit(f, x, y, init2, sigma=dy, tol=tau, dense_output=True)
+popt3, _, _ = lm_fit(f, x, y, init3, sigma=dy, tol=tau, dense_output=True)
 
 plt.figure(2)
 plt.title("Traiettorie soluzioni")
