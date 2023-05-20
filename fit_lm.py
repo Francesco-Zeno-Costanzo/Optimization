@@ -31,15 +31,17 @@ def lm_fit(func, x, y, x0, sigma=None, tol=1e-6, dense_output=False, absolute_si
     sigma : None or 1darray
         the uncertainty on y, if None sigma=np.ones(len(y)))
     tol : float
-        required tollerance, the algorithm stop if
-        abs(rms_rsn - rms_res) < tol
-        rms_rsn = (y - f(x, {\theta^{n+1})/dy
-        rms_res = (y - f(x, {\theta^{n})/dy
+        required tollerance, the algorithm stop if one of this quantities
+        R1 = np.max(abs(J.T @ W @ (y - func(x, *x0))))
+        R2 = np.max(abs(d/x0))
+        R3 = sum(((y - func(x, *x0))/dy)**2)/(N - M) - 1
+        is smaller than tol
+
     dense_output : bool, optional dafult False
         if true all iteration are returned
     absolute_sigma : bool, optional dafult False
-        If True, `sigma` is used in an absolute sense and
-        the estimated parameter covariance `pcov` reflects
+        If True, sigma is used in an absolute sense and
+        the estimated parameter covariance pcov reflects
         these absolute values.
         pcov(absolute_sigma=False) = pcov(absolute_sigma=True) * chisq(popt)/(M-N)
 
@@ -61,11 +63,19 @@ def lm_fit(func, x, y, x0, sigma=None, tol=1e-6, dense_output=False, absolute_si
     N = len(x)             #number of data
     s = np.zeros(M)        #auxiliary array for derivatives
     J = np.zeros((N, M))   #gradient
+    #some trashold
+    eps_1 = 1e-1
+    eps_2 = tol
+    eps_3 = tol
+    eps_4 = tol
 
     if sigma is None :     #error on data
+        W  = np.diag(1/np.ones(N))
         dy = np.ones(N)
     else :
+        W  = np.diag(1/sigma**2)
         dy = sigma
+
 
     if dense_output:       #to store solution
         X = []
@@ -80,24 +90,33 @@ def lm_fit(func, x, y, x0, sigma=None, tol=1e-6, dense_output=False, absolute_si
             J[:,i] = (func(x, *dz1) - func(x, *dz2))/(2*h)  #derivative along z's direction
             s[:] = 0                                        #reset to select the other variables
 
-        JtJ = J.T @ J                             #matrix multiplication, JtJ is an MxM matrix
+        JtJ = J.T @ W @ J                         #matrix multiplication, JtJ is an MxM matrix
         dia = np.eye(M)*np.diag(JtJ)              #dia_ii = JtJ_ii ; dia_ij = 0
-        res = (y - func(x, *x0))/dy               #residuals
-        b   = J.T @ res                           #ordinate or “dependent variable” values of system
+        res = (y - func(x, *x0))                  #residuals
+        b   = J.T @ W @ res                       #ordinate or “dependent variable” values of system
         d   = np.linalg.solve(JtJ + l*dia, b)     #system solution
         x_n = x0 + d                              #solution at new time
 
-        res_new = (y - func(x, *x_n))/dy          #new residuarls
-        rms_res = np.sqrt(sum(res**2))            #=np.linalg.norm, nomr of residuals
-        rms_rsn = np.sqrt(sum(res_new**2))        #norm of new residual
+        # compute the metric
+        chisq_v = sum((res/dy)**2)
+        chisq_n = sum(((y - func(x, *x_n))/dy)**2)
 
-        if rms_rsn < rms_res :                    #if i'm closer to the solution
-            x0 = x_n                              #update solution
-            l /= f                                #reduce damping factor
+        rho = chisq_v - chisq_n
+        den = abs( d.T @ (l*np.diag(JtJ)@d + J.T @ W @ res))
+        rho = rho/den
+        # acceptance
+        if rho > eps_1 :         #if i'm closer to the solution
+            x0 = x_n             #update solution
+            l /= f               #reduce damping factor
         else:
-            l *= f                                #else magnify
+            l *= f               #else magnify
 
-        if abs(rms_rsn - rms_res) < tol:          #break condition
+        # Convergence criteria
+        R1 = np.max(abs(J.T @ W @ (y - func(x, *x0))))
+        R2 = np.max(abs(d/x0))
+        R3 = sum(((y - func(x, *x0))/dy)**2)/(N - M) - 1
+
+        if R1 < eps_2 or R2 < eps_3 or R3 < eps_4:          #break condition
             break
 
         iter += 1
@@ -106,17 +125,10 @@ def lm_fit(func, x, y, x0, sigma=None, tol=1e-6, dense_output=False, absolute_si
             X.append(x0)
 
     #compute covariance matrix
-    # Do Moore-Penrose inverse discarding zero singular values.
-    _, s, VT = svd(J, full_matrices=False)
-    threshold = np.finfo(float).eps * max(J.shape) * s[0]
-
-    s = s[s > threshold]
-    VT = VT[:s.size]
-
-    pcov = np.dot(VT.T / s**2, VT)
+    pcov = np.linalg.inv(JtJ)
 
     if not absolute_sigma:
-        s_sq = sum(res_new**2) / (N - M)
+        s_sq = R3 + 1
         pcov = pcov * s_sq
 
     if not dense_output:
@@ -139,9 +151,9 @@ y_noise = 0.1 * rng.normal(size=x.size)
 y  = y + y_noise
 dy = np.array(y.size*[0.1])
 
-##fit
+##fit a mano
 
-init = np.array([-1, 10.])   #|
+init = np.array([-1, 9.8])   #|
 tau  = 1e-8                  #|> be careful
 
 pars, covm, iter = lm_fit(f, x, y, init, sigma=dy, tol=tau)
@@ -162,6 +174,7 @@ for i in range(0, len(pars)):
     for j in range(0, len(pars)):
        c[i][j] = (covm[i][j])/(np.sqrt(covm.diagonal()[i])*np.sqrt(covm.diagonal()[j]))
 print(c) #matrice di correlazione
+
 
 ##Plot
 #Grafichiamo il risultato
@@ -203,9 +216,9 @@ for i in range(N):
     for j in range(N):
         S2[i, j] = (((y - f(x, p1[i], p2[j]))/dy)**2).sum()
 
-init1 = np.array([-1, 10.])
-init2 = np.array([-1, 10.5])
-init3 = np.array([-1, 9.5])
+init1 = np.array([-1, 9.8])
+init2 = np.array([-1, 10.6])
+init3 = np.array([-1, 9.4])
 tau   = 1e-8
 
 popt1, _, _ = lm_fit(f, x, y, init1, sigma=dy, tol=tau, dense_output=True)
@@ -218,7 +231,7 @@ plt.xlabel('x')
 plt.ylabel('y')
 levels = np.linspace(np.min(S2), np.max(S2), 40)
 p1, p2 = np.meshgrid(p1, p2)
-c=plt.contourf(p1, p2, S2.T , levels=levels, cmap='jet')
+c=plt.contourf(p1, p2, S2.T , levels=levels, cmap='plasma')
 plt.colorbar(c)
 plt.grid()
 plt.plot(popt1[:,0], popt1[:,1], 'k', label='tariettoria1')
@@ -227,4 +240,3 @@ plt.plot(popt3[:,0], popt3[:,1], 'k', label='tariettoria3')
 plt.legend(loc='best')
 
 plt.show()
-
