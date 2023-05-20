@@ -113,7 +113,7 @@ def lm_fit(func, x, y, x0, sigma=None, tol=1e-6, dense_output=False, absolute_si
         # Convergence criteria
         R1 = np.max(abs(J.T @ W @ (y - func(x, *x0))))
         R2 = np.max(abs(d/x0))
-        R3 = sum(((y - func(x, *x0))/dy)**2)/(N - M) - 1
+        R3 = abs(sum(((y - func(x, *x0))/dy)**2)/(N - M) - 1)
 
         if R1 < eps_2 or R2 < eps_3 or R3 < eps_4:          #break condition
             break
@@ -127,7 +127,7 @@ def lm_fit(func, x, y, x0, sigma=None, tol=1e-6, dense_output=False, absolute_si
     pcov = np.linalg.inv(JtJ)
 
     if not absolute_sigma:
-        s_sq = R3 + 1
+        s_sq = sum(((y - func(x, *x0))/dy)**2)/(N - M)
         pcov = pcov * s_sq
 
     if not dense_output:
