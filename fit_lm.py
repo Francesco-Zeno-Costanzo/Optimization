@@ -5,7 +5,6 @@ some parameters delicately to make the result make sense
 """
 
 import numpy as np
-from scipy.linalg import svd
 import matplotlib.pyplot as plt
 
 
