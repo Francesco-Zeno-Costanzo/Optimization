@@ -30,6 +30,8 @@ $$
 f (x_i, \theta_j + \delta_j ) \simeq f(x _i, \theta_j) + J_{ij} \delta_j
 $$
 
+
+
 where \delta is the step of each iteration and J:
 
 $$
