@@ -27,18 +27,17 @@ POI LO SCRIVO
 Consider our fit function f which depends on an independent variable and a set of parameters $\theta$, which is basically a vector of $\mathbb{R}^m$. We can expand f into Taylor series around a value of our parameters:
 
 $$
-f (x_i, \theta_j + \delta_j ) \simeq f(x _i, \theta_j) + J_{ij} \delta_j
+f(x_i, \theta_j + \delta_j ) \simeq f(x_i, \theta_j) + J_{ij} \delta_j
 $$
-
-
 
 where \delta is the step of each iteration and J:
 
 $$
 J_{ij} = \frac{\partial f(x_i, \theta_j)}{\partial \theta_j} = 
-\begin{bmatrix} \dfrac{\partial f(x_1, \theta_1)}{\partial \theta_1} & \cdots & \dfrac{\partial f(x_1, \theta_m)}{\partial \theta_m} \\ \vdots & \ddots & \vdots \\ \dfrac{\partial f(x_n, \theta_1)}{\partial \theta_1} & \cdots & \dfrac{\partial f(x_n, \theta_m)}{\partial \theta_m}  \end{bmatrix}
+\begin{bmatrix} \dfrac{\partial f(x_1, \theta_1)}{\partial \theta_1} & \cdots & \dfrac{\partial f(x_1, \theta_m)}{\partial \theta_m} \\
+\vdots & \ddots & \vdots \\ 
+\dfrac{\partial f(x_n, \theta_1)}{\partial \theta_1} & \cdots & \dfrac{\partial f(x_n, \theta_m)}{\partial \theta_m} \end{bmatrix}
 $$
-
 
 
 So we have:
